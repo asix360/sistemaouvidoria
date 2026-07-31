@@ -27,11 +27,9 @@ import { useToast } from '../context/ToastContext';
 import { Manifestation, ManifestationStatus } from '../types';
 import { printManifestationProtocol } from '../utils/exportHelpers';
 
-interface OfficialResponsesViewProps {
-  onOpenAiAssistant?: (m: Manifestation) => void;
-}
+interface OfficialResponsesViewProps {}
 
-export const OfficialResponsesView: React.FC<OfficialResponsesViewProps> = ({ onOpenAiAssistant }) => {
+export const OfficialResponsesView: React.FC<OfficialResponsesViewProps> = () => {
   const {
     manifestations,
     currentUser,
@@ -850,18 +848,6 @@ export const OfficialResponsesView: React.FC<OfficialResponsesViewProps> = ({ on
                     <Send className="w-4 h-4 text-emerald-600" />
                     {responseType === 'official' ? 'Emitir Resposta Oficial Institucional' : 'Registrar Parecer Técnico Interno'}
                   </h3>
-
-                  {/* AI Assistant Invoker Button */}
-                  {onOpenAiAssistant && (
-                    <button
-                      type="button"
-                      onClick={() => onOpenAiAssistant(selectedM)}
-                      className="px-3 py-1.5 rounded-xl bg-purple-100 text-purple-800 dark:bg-purple-950 dark:text-purple-300 border border-purple-300 dark:border-purple-800 text-xs font-bold hover:bg-purple-200 flex items-center gap-1.5 transition-all shadow-2xs"
-                    >
-                      <Sparkles className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400 animate-pulse" />
-                      <span>Gerar com Inteligência Artificial</span>
-                    </button>
-                  )}
                 </div>
 
                 {/* TEMPLATE PICKER */}

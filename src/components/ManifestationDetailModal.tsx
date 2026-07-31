@@ -27,13 +27,11 @@ import { printManifestationProtocol } from '../utils/exportHelpers';
 interface ManifestationDetailModalProps {
   manifestation: Manifestation;
   onClose: () => void;
-  onOpenAiAssistant?: (m: Manifestation) => void;
 }
 
 export const ManifestationDetailModal: React.FC<ManifestationDetailModalProps> = ({
   manifestation: m,
-  onClose,
-  onOpenAiAssistant
+  onClose
 }) => {
   const {
     currentUser,
@@ -148,17 +146,6 @@ export const ManifestationDetailModal: React.FC<ManifestationDetailModalProps> =
               <Printer className="w-4 h-4 text-sky-600" />
               <span className="hidden sm:inline">Imprimir</span>
             </button>
-
-            {onOpenAiAssistant && (
-              <button
-                onClick={() => onOpenAiAssistant(m)}
-                className="p-2.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white text-xs font-bold flex items-center gap-1.5 shadow-md shadow-purple-600/20 transition-all"
-                title="Sugerir Resposta com Inteligência Artificial Gemini"
-              >
-                <Sparkles className="w-4 h-4" />
-                <span className="hidden sm:inline">IA Resposta</span>
-              </button>
-            )}
 
             <button
               onClick={onClose}

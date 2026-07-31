@@ -246,17 +246,223 @@ export const UsersPermissionsView: React.FC = () => {
     setTimeout(() => setToastMsg(''), 4000);
   };
 
+  const computeCoherentPermissions = (
+    currentPerms: UserPermissions,
+    toggledKey: keyof UserPermissions
+  ): UserPermissions => {
+    const newValue = !currentPerms[toggledKey];
+    const updated: UserPermissions = {
+      ...currentPerms,
+      [toggledKey]: newValue
+    };
+
+    if (!newValue) {
+      // --- DESATIVANDO (TURNING OFF) ---
+      if (toggledKey === 'visualizar' || toggledKey === 'modulo_manifestacoes') {
+        updated.visualizar = false;
+        updated.modulo_manifestacoes = false;
+        updated.editar = false;
+        updated.excluir = false;
+        updated.responder = false;
+        updated.encaminhar = false;
+        updated.encerrar = false;
+        updated.reabrir = false;
+        updated.modulo_resposta_oficial = false;
+        updated.modulo_parecer_setor = false;
+        updated.modulo_tramitacao_setores = false;
+        updated.modulo_controle_sla = false;
+      }
+
+      if (toggledKey === 'cadastrar') {
+        updated.modulo_nova_manifestacao = false;
+      }
+      if (toggledKey === 'modulo_nova_manifestacao') {
+        updated.cadastrar = false;
+      }
+
+      if (toggledKey === 'responder') {
+        updated.modulo_resposta_oficial = false;
+        updated.modulo_parecer_setor = false;
+      }
+      if (toggledKey === 'modulo_resposta_oficial') {
+        if (!updated.modulo_parecer_setor) {
+          updated.responder = false;
+        }
+      }
+      if (toggledKey === 'modulo_parecer_setor') {
+        if (!updated.modulo_resposta_oficial) {
+          updated.responder = false;
+        }
+      }
+
+      if (toggledKey === 'encaminhar') {
+        updated.modulo_tramitacao_setores = false;
+      }
+      if (toggledKey === 'modulo_tramitacao_setores') {
+        updated.encaminhar = false;
+      }
+
+      if (toggledKey === 'emitir_relatorios') {
+        updated.modulo_relatorios = false;
+      }
+      if (toggledKey === 'modulo_relatorios') {
+        updated.emitir_relatorios = false;
+      }
+
+      if (toggledKey === 'gerenciar_usuarios') {
+        updated.modulo_usuarios_niveis = false;
+      }
+      if (toggledKey === 'modulo_usuarios_niveis') {
+        updated.gerenciar_usuarios = false;
+      }
+
+      if (toggledKey === 'configuracoes') {
+        updated.modulo_configuracoes = false;
+      }
+      if (toggledKey === 'modulo_configuracoes') {
+        updated.configuracoes = false;
+      }
+    } else {
+      // --- ATIVANDO (TURNING ON) ---
+      const viewDependents: (keyof UserPermissions)[] = [
+        'editar',
+        'excluir',
+        'responder',
+        'encaminhar',
+        'encerrar',
+        'reabrir',
+        'modulo_manifestacoes',
+        'modulo_resposta_oficial',
+        'modulo_parecer_setor',
+        'modulo_tramitacao_setores',
+        'modulo_controle_sla'
+      ];
+      if (viewDependents.includes(toggledKey)) {
+        updated.visualizar = true;
+        updated.modulo_manifestacoes = true;
+      }
+
+      if (toggledKey === 'cadastrar') {
+        updated.modulo_nova_manifestacao = true;
+      }
+      if (toggledKey === 'modulo_nova_manifestacao') {
+        updated.cadastrar = true;
+      }
+
+      if (toggledKey === 'responder') {
+        updated.modulo_resposta_oficial = true;
+        updated.visualizar = true;
+        updated.modulo_manifestacoes = true;
+      }
+      if (toggledKey === 'modulo_resposta_oficial') {
+        updated.responder = true;
+        updated.visualizar = true;
+        updated.modulo_manifestacoes = true;
+      }
+      if (toggledKey === 'modulo_parecer_setor') {
+        updated.responder = true;
+        updated.visualizar = true;
+        updated.modulo_manifestacoes = true;
+      }
+
+      if (toggledKey === 'encaminhar') {
+        updated.modulo_tramitacao_setores = true;
+        updated.visualizar = true;
+        updated.modulo_manifestacoes = true;
+      }
+      if (toggledKey === 'modulo_tramitacao_setores') {
+        updated.encaminhar = true;
+        updated.visualizar = true;
+        updated.modulo_manifestacoes = true;
+      }
+
+      if (toggledKey === 'emitir_relatorios') {
+        updated.modulo_relatorios = true;
+      }
+      if (toggledKey === 'modulo_relatorios') {
+        updated.emitir_relatorios = true;
+      }
+
+      if (toggledKey === 'gerenciar_usuarios') {
+        updated.modulo_usuarios_niveis = true;
+      }
+      if (toggledKey === 'modulo_usuarios_niveis') {
+        updated.gerenciar_usuarios = true;
+      }
+
+      if (toggledKey === 'configuracoes') {
+        updated.modulo_configuracoes = true;
+      }
+      if (toggledKey === 'modulo_configuracoes') {
+        updated.configuracoes = true;
+      }
+    }
+
+    return updated;
+  };
+
   const handleTogglePerm = (key: keyof UserPermissions) => {
     if (selectedUser.id === currentUser.id) {
       notifyError('Ação Bloqueada por Segurança', ['Você não pode alterar as próprias permissões de acesso da conta autenticada no momento.']);
       return;
     }
-    const updated = {
-      ...selectedUser.permissions,
-      [key]: !selectedUser.permissions[key]
-    };
+    const updated = computeCoherentPermissions(selectedUser.permissions, key);
     updateUserPermissions(selectedUser.id, updated);
     setSelectedUser(prev => ({ ...prev, permissions: updated }));
+  };
+
+  const handleResetRoleDefaults = () => {
+    if (selectedUser.id === currentUser.id) {
+      notifyError('Ação Bloqueada por Segurança', ['Você não pode alterar as próprias permissões de acesso da conta autenticada no momento.']);
+      return;
+    }
+    const defaultPerms = getDefaultPermissionsForRole(selectedUser.role);
+    updateUserPermissions(selectedUser.id, defaultPerms);
+    setSelectedUser(prev => ({ ...prev, permissions: defaultPerms }));
+    setToastMsg(`Permissões restauradas para o padrão do perfil "${selectedUser.role}".`);
+    setTimeout(() => setToastMsg(''), 4000);
+  };
+
+  const handleEnableAll = () => {
+    if (selectedUser.id === currentUser.id) {
+      notifyError('Ação Bloqueada por Segurança', ['Você não pode alterar as próprias permissões de acesso da conta autenticada no momento.']);
+      return;
+    }
+    const allPerms: UserPermissions = {
+      visualizar: true, cadastrar: true, editar: true, excluir: true,
+      responder: true, encaminhar: true, encerrar: true, reabrir: true,
+      emitir_relatorios: true, gerenciar_usuarios: true, configuracoes: true,
+      modulo_dashboard: true, modulo_nova_manifestacao: true, modulo_manifestacoes: true,
+      modulo_resposta_oficial: true, modulo_parecer_setor: true, modulo_controle_sla: true,
+      modulo_tramitacao_setores: true, modulo_modelos_resposta: true, modulo_gestao_setores: true,
+      modulo_gestao_equipe: true, modulo_relatorios: true, modulo_usuarios_niveis: true,
+      modulo_logs_auditoria: true, modulo_configuracoes: true
+    };
+    updateUserPermissions(selectedUser.id, allPerms);
+    setSelectedUser(prev => ({ ...prev, permissions: allPerms }));
+    setToastMsg('Todas as permissões foram ativadas com sucesso.');
+    setTimeout(() => setToastMsg(''), 4000);
+  };
+
+  const handleDisableAll = () => {
+    if (selectedUser.id === currentUser.id) {
+      notifyError('Ação Bloqueada por Segurança', ['Você não pode alterar as próprias permissões de acesso da conta autenticada no momento.']);
+      return;
+    }
+    const nonePerms: UserPermissions = {
+      visualizar: false, cadastrar: false, editar: false, excluir: false,
+      responder: false, encaminhar: false, encerrar: false, reabrir: false,
+      emitir_relatorios: false, gerenciar_usuarios: false, configuracoes: false,
+      modulo_dashboard: false, modulo_nova_manifestacao: false, modulo_manifestacoes: false,
+      modulo_resposta_oficial: false, modulo_parecer_setor: false, modulo_controle_sla: false,
+      modulo_tramitacao_setores: false, modulo_modelos_resposta: false, modulo_gestao_setores: false,
+      modulo_gestao_equipe: false, modulo_relatorios: false, modulo_usuarios_niveis: false,
+      modulo_logs_auditoria: false, modulo_configuracoes: false
+    };
+    updateUserPermissions(selectedUser.id, nonePerms);
+    setSelectedUser(prev => ({ ...prev, permissions: nonePerms }));
+    setToastMsg('Todas as permissões foram desativadas.');
+    setTimeout(() => setToastMsg(''), 4000);
   };
 
   const filteredUsers = users.filter(u =>
@@ -472,6 +678,53 @@ export const UsersPermissionsView: React.FC = () => {
 
           {/* Permissions Switcher */}
           <div className="space-y-5">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-700">
+              <div className="flex items-center gap-2 text-xs">
+                <ShieldCheck className="w-4 h-4 text-sky-600 shrink-0" />
+                <span className="text-slate-700 dark:text-slate-300 font-medium">
+                  <strong>Ações:</strong> <span className="font-bold text-emerald-600 dark:text-emerald-400">{operationalPermissionsList.filter(i => selectedUser.permissions[i.key]).length}/11 Ativas</span>
+                  <span className="mx-2">•</span>
+                  <strong>Módulos:</strong> <span className="font-bold text-sky-600 dark:text-sky-400">{modulePermissionsList.filter(i => selectedUser.permissions[i.key] !== false).length}/14 Ativos</span>
+                </span>
+              </div>
+
+              {selectedUser.id !== currentUser.id && (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={handleResetRoleDefaults}
+                    className="px-2.5 py-1 rounded-lg bg-sky-100 hover:bg-sky-200 dark:bg-sky-950 dark:hover:bg-sky-900 text-sky-800 dark:text-sky-300 border border-sky-300 dark:border-sky-800 text-[11px] font-bold transition-all"
+                    title={`Restaurar permissões padrão do perfil ${selectedUser.role}`}
+                  >
+                    Restaurar Padrão ({selectedUser.role})
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleEnableAll}
+                    className="px-2.5 py-1 rounded-lg bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950 dark:hover:bg-emerald-900 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800 text-[11px] font-bold transition-all"
+                  >
+                    Ativar Todos
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleDisableAll}
+                    className="px-2.5 py-1 rounded-lg bg-rose-100 hover:bg-rose-200 dark:bg-rose-950 dark:hover:bg-rose-900 text-rose-800 dark:text-rose-300 border border-rose-300 dark:border-rose-800 text-[11px] font-bold transition-all"
+                  >
+                    Desativar Todos
+                  </button>
+                </div>
+              )}
+            </div>
+
+            <div className="p-3 rounded-xl bg-sky-50/70 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/60 text-sky-900 dark:text-sky-200 text-xs font-semibold flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-sky-600 shrink-0" />
+              <span>
+                <strong>Sincronização Inteligente:</strong> As Ações e os Módulos são vinculados bidirecionalmente. Desativar um item pai ou dependente desativa automaticamente os recursos associados para manter a governança.
+              </span>
+            </div>
+
             {selectedUser.id === currentUser.id && (
               <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center gap-2.5">
                 <Lock className="w-4 h-4 text-amber-500 shrink-0" />
@@ -481,9 +734,14 @@ export const UsersPermissionsView: React.FC = () => {
 
             {/* Operational Actions */}
             <div>
-              <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider mb-3">
-                Ações Operacionais no Sistema
-              </h3>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-xs font-black text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+                  Ações Operacionais no Sistema
+                </h3>
+                <span className="text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
+                  {operationalPermissionsList.filter(i => selectedUser.permissions[i.key]).length} de 11 ativas
+                </span>
+              </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 {operationalPermissionsList.map(item => {
@@ -516,9 +774,14 @@ export const UsersPermissionsView: React.FC = () => {
 
             {/* Granular Module Access */}
             <div className="pt-4 border-t border-slate-100 dark:border-slate-700">
-              <h3 className="text-xs font-black text-sky-600 dark:text-sky-400 uppercase tracking-wider mb-1">
-                Direitos de Acesso Granulares aos Módulos (Navegação & Notificações)
-              </h3>
+              <div className="flex items-center justify-between mb-1">
+                <h3 className="text-xs font-black text-sky-600 dark:text-sky-400 uppercase tracking-wider">
+                  Direitos de Acesso Granulares aos Módulos (Navegação & Notificações)
+                </h3>
+                <span className="text-[11px] font-bold text-sky-600 dark:text-sky-400 shrink-0 ml-2">
+                  {modulePermissionsList.filter(i => selectedUser.permissions[i.key] !== false).length} de 14 ativos
+                </span>
+              </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-3">
                 Se um módulo for desativado para o usuário, ele não verá o menu correspondente nem receberá notificações associadas a esse módulo.
               </p>

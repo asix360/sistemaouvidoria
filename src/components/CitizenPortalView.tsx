@@ -233,12 +233,22 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({ onGoToAdmi
           </div>
 
           {/* UPA Contact & Unit Badge */}
-          <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
-            <PhoneCall className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
-            <span className="font-bold">{settings.phone}</span>
-            <span className="text-slate-300 dark:text-slate-700">•</span>
-            <span className="font-medium hidden sm:inline">{settings.unit_code}</span>
-          </div>
+          {(settings.phone?.trim() || settings.unit_code?.trim()) && (
+            <div className="flex items-center gap-3 text-xs text-slate-600 dark:text-slate-300 bg-slate-100 dark:bg-slate-800/80 px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700">
+              {settings.phone?.trim() && (
+                <>
+                  <PhoneCall className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                  <span className="font-bold">{settings.phone}</span>
+                </>
+              )}
+              {settings.phone?.trim() && settings.unit_code?.trim() && (
+                <span className="text-slate-300 dark:text-slate-700">•</span>
+              )}
+              {settings.unit_code?.trim() && (
+                <span className="font-medium hidden sm:inline">{settings.unit_code}</span>
+              )}
+            </div>
+          )}
         </div>
       </header>
 
@@ -250,18 +260,22 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({ onGoToAdmi
 
         <div className="max-w-4xl mx-auto text-center space-y-4 relative z-10">
           
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold shadow-2xs">
-            <Stethoscope className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-            <span>{settings.operating_hours || 'Atendimento 24 Horas UPA — Todos os Dias'}</span>
-          </div>
+          {settings.operating_hours?.trim() && (
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 border border-emerald-300 dark:border-emerald-800 text-emerald-800 dark:text-emerald-300 text-xs font-bold shadow-2xs">
+              <Stethoscope className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+              <span>{settings.operating_hours}</span>
+            </div>
+          )}
 
           <h1 className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-            Ouvidoria da <span className="text-emerald-600 dark:text-emerald-400">{settings.upa_name}</span>
+            Ouvidoria da <span className="text-emerald-600 dark:text-emerald-400">{settings.upa_name || 'Unidade de Pronto Atendimento'}</span>
           </h1>
 
-          <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed font-medium">
-            {settings.welcome_message || 'Sua manifestação nos ajuda a aprimorar o acolhimento, triagem de emergência, atendimento médico e enfermagem do nosso Pronto Socorro.'}
-          </p>
+          {settings.welcome_message?.trim() && (
+            <p className="text-sm sm:text-base text-slate-600 dark:text-slate-300 max-w-2xl mx-auto leading-relaxed font-medium">
+              {settings.welcome_message}
+            </p>
+          )}
 
           {/* UPA Core Pillar Badges */}
           <div className="flex flex-wrap items-center justify-center gap-2.5 pt-2 text-xs">
@@ -269,10 +283,12 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({ onGoToAdmi
               <ShieldCheck className="w-4 h-4 text-emerald-600" />
               <span>Garantia de Sigilo & LGPD</span>
             </div>
-            <div className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold shadow-2xs flex items-center gap-1.5">
-              <Clock className="w-4 h-4 text-blue-600" />
-              <span>{settings.operating_hours || 'Atendimento 24 Horas'}</span>
-            </div>
+            {settings.operating_hours?.trim() && (
+              <div className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold shadow-2xs flex items-center gap-1.5">
+                <Clock className="w-4 h-4 text-blue-600" />
+                <span>{settings.operating_hours}</span>
+              </div>
+            )}
             <div className="px-3.5 py-1.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 font-semibold shadow-2xs flex items-center gap-1.5">
               <UserX className="w-4 h-4 text-amber-600" />
               <span>Opção de Relato Anônimo</span>
@@ -843,65 +859,67 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({ onGoToAdmi
               </div>
             </div>
 
-            {/* BANNER DE CONTATO DISQUE SAÚDE */}
-            <div className="p-5 rounded-2xl bg-gradient-to-r from-emerald-800 via-blue-800 to-emerald-900 text-white flex flex-col sm:flex-row items-center justify-between gap-4 shadow-md">
-              <div className="space-y-1 text-center sm:text-left">
-                <span className="text-xs font-black text-amber-300 uppercase tracking-widest block">
-                  CANAL NACIONAL DO SUS
-                </span>
-                <h3 className="text-xl font-extrabold">Disque Saúde 136</h3>
-                <p className="text-xs text-emerald-100">
-                  Central pública gratuita para informações sobre o SUS, vacinas, upas e ouvidoria nacional.
-                </p>
-              </div>
-
-              <div className="px-6 py-3 rounded-xl bg-amber-400 text-slate-950 font-black text-2xl shadow-lg shrink-0">
-                136
-              </div>
-            </div>
           </div>
         )}
 
         {/* CARD DINÂMICO DE INFORMAÇÕES INSTITUCIONAIS DA UPA */}
-        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
-          <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
-            <Building className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-            <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
-              Dados de Contato & Localização da Unidade
-            </h3>
+        {(settings.address?.trim() || settings.phone?.trim() || settings.email?.trim() || settings.unit_code?.trim() || settings.director_name?.trim() || settings.ombudsman_coordinator?.trim()) && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 shadow-sm space-y-4">
+            <div className="flex items-center gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <Building className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              <h3 className="text-sm font-extrabold text-slate-900 dark:text-white uppercase tracking-wider">
+                Dados de Contato & Localização da Unidade
+              </h3>
+            </div>
+
+            {(settings.address?.trim() || settings.phone?.trim() || settings.email?.trim() || settings.unit_code?.trim()) && (
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
+                {settings.address?.trim() && (
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-slate-400 block">Endereço da UPA:</span>
+                    <p className="font-semibold text-slate-700 dark:text-slate-200">{settings.address}</p>
+                  </div>
+                )}
+
+                {settings.phone?.trim() && (
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-slate-400 block">Telefone da Ouvidoria:</span>
+                    <p className="font-semibold text-slate-700 dark:text-slate-200">{settings.phone}</p>
+                  </div>
+                )}
+
+                {settings.email?.trim() && (
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-slate-400 block">E-mail Institucional:</span>
+                    <p className="font-semibold text-slate-700 dark:text-slate-200 truncate">{settings.email}</p>
+                  </div>
+                )}
+
+                {settings.unit_code?.trim() && (
+                  <div className="space-y-1">
+                    <span className="text-[11px] font-bold text-slate-400 block">Código da Unidade:</span>
+                    <p className="font-semibold text-slate-700 dark:text-slate-200">{settings.unit_code}</p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {(settings.director_name?.trim() || settings.ombudsman_coordinator?.trim()) && (
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-2">
+                {settings.director_name?.trim() && (
+                  <div>
+                    <strong className="text-slate-700 dark:text-slate-300">Direção Técnica:</strong> {settings.director_name}
+                  </div>
+                )}
+                {settings.ombudsman_coordinator?.trim() && (
+                  <div>
+                    <strong className="text-slate-700 dark:text-slate-300">Coordenação de Ouvidoria:</strong> {settings.ombudsman_coordinator}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 text-xs">
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 block">Endereço da UPA:</span>
-              <p className="font-semibold text-slate-700 dark:text-slate-200">{settings.address}</p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 block">Telefone da Ouvidoria:</span>
-              <p className="font-semibold text-slate-700 dark:text-slate-200">{settings.phone}</p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 block">E-mail Institucional:</span>
-              <p className="font-semibold text-slate-700 dark:text-slate-200 truncate">{settings.email}</p>
-            </div>
-
-            <div className="space-y-1">
-              <span className="text-[11px] font-bold text-slate-400 block">Código da Unidade:</span>
-              <p className="font-semibold text-slate-700 dark:text-slate-200">{settings.unit_code}</p>
-            </div>
-          </div>
-
-          <div className="pt-3 border-t border-slate-100 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between text-[11px] text-slate-500 gap-2">
-            <div>
-              <strong className="text-slate-700 dark:text-slate-300">Direção Técnica:</strong> {settings.director_name}
-            </div>
-            <div>
-              <strong className="text-slate-700 dark:text-slate-300">Coordenação de Ouvidoria:</strong> {settings.ombudsman_coordinator}
-            </div>
-          </div>
-        </div>
+        )}
 
       </main>
 
@@ -914,8 +932,12 @@ export const CitizenPortalView: React.FC<CitizenPortalViewProps> = ({ onGoToAdmi
           </div>
 
           <div className="flex items-center gap-4">
-            <span className="font-semibold text-slate-600 dark:text-slate-400">{settings.address}</span>
-            <span>•</span>
+            {settings.address?.trim() && (
+              <>
+                <span className="font-semibold text-slate-600 dark:text-slate-400">{settings.address}</span>
+                <span>•</span>
+              </>
+            )}
             <span>SUS - Ministério da Saúde</span>
           </div>
         </div>
