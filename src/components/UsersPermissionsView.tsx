@@ -3,6 +3,7 @@ import { ShieldCheck, UserCheck, Check, X, Plus, UserPlus, Building2, Edit2, Sea
 import { useSystem } from '../context/SystemContext';
 import { useToast } from '../context/ToastContext';
 import { UserProfile, UserPermissions, Role } from '../types';
+import { INITIAL_USERS } from '../data/initialSeed';
 
 export const UsersPermissionsView: React.FC = () => {
   const { users, addUser, updateUser, updateUserPermissions, resetUserPassword, sectors, currentUser } = useSystem();

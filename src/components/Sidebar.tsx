@@ -27,6 +27,7 @@ export type ActiveTab =
   | 'dashboard'
   | 'nova'
   | 'lista'
+  | 'manifestacoes'
   | 'respostas'
   | 'resposta_setor'
   | 'sla'
