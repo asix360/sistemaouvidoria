@@ -101,7 +101,16 @@ const SystemContext = createContext<SystemContextType | undefined>(undefined);
 const LOCAL_STORAGE_KEY = 'ouvidoria_upa_sus_v1';
 
 export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<'light' | 'dark'>('light');
+  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
+    try {
+      const saved = localStorage.getItem('ouvidoria_theme');
+      if (saved === 'dark' || saved === 'light') return saved;
+      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+        return 'dark';
+      }
+    } catch (e) {}
+    return 'light';
+  });
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return localStorage.getItem('ouvidoria_auth_session') === 'true';
   });
@@ -276,13 +285,37 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [manifestations, sectors, professionals, settings, auditLogs, users, responseTemplates]);
 
-  const setTheme = (t: 'light' | 'dark') => {
-    setThemeState(t);
-    if (t === 'dark') {
+  // Sincronizar classe 'dark' no elemento raiz HTML no carregamento e ao alterar o tema
+  useEffect(() => {
+    if (theme === 'dark') {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
+  }, [theme]);
+
+  // Escutar alterações do modo escuro/claro nas configurações do Sistema Operacional
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+
+    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+      const saved = localStorage.getItem('ouvidoria_theme');
+      // Se o usuário não salvou manualmente uma preferência individual, segue o sistema operacional
+      if (!saved) {
+        setThemeState(e.matches ? 'dark' : 'light');
+      }
+    };
+
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+  }, []);
+
+  const setTheme = (t: 'light' | 'dark') => {
+    setThemeState(t);
+    try {
+      localStorage.setItem('ouvidoria_theme', t);
+    } catch (e) {}
   };
 
   // Helper: SLA calculation
