@@ -20,12 +20,11 @@ import { AuditLogView } from './components/AuditLogView';
 import { SettingsView } from './components/SettingsView';
 import { ResponseTemplatesView } from './components/ResponseTemplatesView';
 import { ManifestationDetailModal } from './components/ManifestationDetailModal';
-import { GeminiResponseAssistantModal } from './components/GeminiResponseAssistantModal';
 import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { Manifestation } from './types';
 
 const MainAppContent: React.FC = () => {
-  const { isAuthenticated, currentUser, manifestations, addResponse } = useSystem();
+  const { isAuthenticated, currentUser, manifestations } = useSystem();
   
   // Navegação por Hash para 2 Páginas Distintas: Público (#/cidadao) vs Restrito (#/servidor)
   const [viewMode, setViewModeState] = useState<'citizen' | 'admin'>(() => {
@@ -54,7 +53,6 @@ const MainAppContent: React.FC = () => {
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [collapsed, setCollapsed] = useState(false);
   const [selectedManifestation, setSelectedManifestation] = useState<Manifestation | null>(null);
-  const [aiManifestation, setAiManifestation] = useState<Manifestation | null>(null);
 
   // 1. Página Pública do Cidadão (#/cidadao)
   if (viewMode === 'citizen') {
@@ -137,11 +135,7 @@ const MainAppContent: React.FC = () => {
                 />
               )}
 
-              {activeTab === 'respostas' && (
-                <OfficialResponsesView
-                  onOpenAiAssistant={m => setAiManifestation(m)}
-                />
-              )}
+              {activeTab === 'respostas' && <OfficialResponsesView />}
 
               {activeTab === 'resposta_setor' && (
                 <SectorResponseView
@@ -196,23 +190,6 @@ const MainAppContent: React.FC = () => {
             manifestations.find(m => m.id === selectedManifestation.id) || selectedManifestation
           }
           onClose={() => setSelectedManifestation(null)}
-          onOpenAiAssistant={m => setAiManifestation(m)}
-        />
-      )}
-
-      {/* AI Gemini Draft Assistant Modal */}
-      {aiManifestation && (
-        <GeminiResponseAssistantModal
-          manifestation={aiManifestation}
-          onClose={() => setAiManifestation(null)}
-          onApplyResponse={draftText => {
-            addResponse(aiManifestation.id, {
-              content: draftText,
-              is_final: true,
-              status_after: 'Concluída'
-            });
-            setAiManifestation(null);
-          }}
         />
       )}
     </div>

@@ -13,8 +13,8 @@ export const SettingsView: React.FC = () => {
   const [address, setAddress] = useState(settings.address);
   const [directorName, setDirectorName] = useState(settings.director_name);
   const [coordinatorName, setCoordinatorName] = useState(settings.ombudsman_coordinator);
-  const [operatingHours, setOperatingHours] = useState(settings.operating_hours || 'Atendimento 24 Horas — Todos os dias (segunda a domingo, inclusive feriados)');
-  const [welcomeMessage, setWelcomeMessage] = useState(settings.welcome_message || 'Sua manifestação nos ajuda a aprimorar o acolhimento, triagem de emergência, atendimento médico e enfermagem do nosso Pronto Socorro.');
+  const [operatingHours, setOperatingHours] = useState(settings.operating_hours ?? '');
+  const [welcomeMessage, setWelcomeMessage] = useState(settings.welcome_message ?? '');
   const [defaultSla, setDefaultSla] = useState(settings.default_sla_days);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
