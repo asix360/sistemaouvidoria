@@ -26,35 +26,48 @@ import { Manifestation } from './types';
 const MainAppContent: React.FC = () => {
   const { isAuthenticated, currentUser, manifestations } = useSystem();
   
-  // Navegação por Hash para 2 Páginas Distintas: Público (#/cidadao) vs Restrito (#/servidor)
+  // Navegação por Path Limpo para 2 Módulos: Público (/cidadao) vs Restrito (/servidor)
   const [viewMode, setViewModeState] = useState<'citizen' | 'admin'>(() => {
-    return window.location.hash.includes('admin') || window.location.hash.includes('servidor')
+    const path = window.location.pathname.toLowerCase();
+    const hash = window.location.hash.toLowerCase();
+    return path.includes('/servidor') || path.includes('/admin') || hash.includes('servidor') || hash.includes('admin')
       ? 'admin'
       : 'citizen';
   });
 
   const setViewMode = (mode: 'citizen' | 'admin') => {
     setViewModeState(mode);
-    window.location.hash = mode === 'admin' ? '#/servidor' : '#/cidadao';
+    const targetPath = mode === 'admin' ? '/servidor' : '/cidadao';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({}, '', targetPath);
+    }
   };
 
   React.useEffect(() => {
-    const handleHashChange = () => {
-      if (window.location.hash.includes('admin') || window.location.hash.includes('servidor')) {
+    const handleLocationChange = () => {
+      const path = window.location.pathname.toLowerCase();
+      const hash = window.location.hash.toLowerCase();
+      if (path.includes('/servidor') || path.includes('/admin') || hash.includes('servidor') || hash.includes('admin')) {
         setViewModeState('admin');
       } else {
         setViewModeState('citizen');
       }
     };
-    window.addEventListener('hashchange', handleHashChange);
-    return () => window.removeEventListener('hashchange', handleHashChange);
+
+    window.addEventListener('popstate', handleLocationChange);
+    window.addEventListener('hashchange', handleLocationChange);
+    return () => {
+      window.removeEventListener('popstate', handleLocationChange);
+      window.removeEventListener('hashchange', handleLocationChange);
+    };
   }, []);
 
   const [activeTab, setActiveTab] = useState<ActiveTab>('dashboard');
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedManifestation, setSelectedManifestation] = useState<Manifestation | null>(null);
 
-  // 1. Página Pública do Cidadão (#/cidadao)
+  // 1. Página Pública do Cidadão (/cidadao)
   if (viewMode === 'citizen') {
     return (
       <CitizenPortalView
@@ -63,7 +76,7 @@ const MainAppContent: React.FC = () => {
     );
   }
 
-  // 2. Página Restrita do Funcionário - Não Autenticado (#/servidor)
+  // 2. Página Restrita do Funcionário - Não Autenticado (/servidor)
   if (!isAuthenticated) {
     return (
       <LoginView
@@ -83,14 +96,17 @@ const MainAppContent: React.FC = () => {
         setActiveTab={setActiveTab}
         collapsed={collapsed}
         setCollapsed={setCollapsed}
+        mobileOpen={mobileOpen}
+        setMobileOpen={setMobileOpen}
       />
 
       {/* Main Content Workspace */}
-      <div className="flex-1 flex flex-col h-full overflow-hidden">
+      <div className="flex-1 flex flex-col h-full overflow-hidden min-w-0">
         {/* Header Bar */}
         <Header
           setActiveTab={setActiveTab}
           onOpenCitizenPortal={() => setViewMode('citizen')}
+          onToggleMobileMenu={() => setMobileOpen(prev => !prev)}
         />
 
         {/* Dynamic Workspace Area with Strict Module Route Guard */}

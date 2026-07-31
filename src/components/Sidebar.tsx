@@ -45,6 +45,8 @@ interface SidebarProps {
   setActiveTab: (tab: ActiveTab) => void;
   collapsed: boolean;
   setCollapsed: (c: boolean) => void;
+  mobileOpen?: boolean;
+  setMobileOpen?: (open: boolean) => void;
 }
 
 export const isTabAllowed = (tab: ActiveTab, user: UserProfile): boolean => {
@@ -90,7 +92,9 @@ export const Sidebar: React.FC<SidebarProps> = ({
   activeTab,
   setActiveTab,
   collapsed,
-  setCollapsed
+  setCollapsed,
+  mobileOpen,
+  setMobileOpen
 }) => {
   const { currentUser, settings, logout } = useSystem();
 
@@ -186,57 +190,71 @@ export const Sidebar: React.FC<SidebarProps> = ({
   ];
 
   return (
-    <aside
-      className={`relative flex flex-col border-r transition-all duration-300 z-20 select-none ${
-        collapsed ? 'w-20' : 'w-64'
-      } bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200`}
-    >
-      {/* Brand Header */}
-      <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-800">
-        <div className="flex items-center gap-2.5 overflow-hidden">
-          <UpaLogo size="sm" showSubtitle={false} className="shrink-0" />
-          {!collapsed && (
-            <div className="flex flex-col min-w-0">
-              <span className="font-bold text-slate-900 dark:text-white text-xs leading-tight truncate">
-                Ouvidoria UPA
-              </span>
-              <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 truncate">
-                {settings.unit_code || 'Unidade 24h'}
-              </span>
-            </div>
-          )}
+    <>
+      {/* Mobile Backdrop Overlay */}
+      <div
+        onClick={() => setMobileOpen?.(false)}
+        className={`fixed inset-0 bg-slate-950/60 backdrop-blur-xs z-40 md:hidden transition-opacity duration-300 ${
+          mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'
+        }`}
+      />
+
+      <aside
+        className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r transition-transform md:transition-all duration-300 select-none md:relative md:translate-x-0 ${
+          mobileOpen ? 'translate-x-0' : '-translate-x-full'
+        } ${
+          collapsed ? 'w-20' : 'w-64'
+        } bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-200 shadow-2xl md:shadow-none`}
+      >
+        {/* Brand Header */}
+        <div className="flex items-center justify-between h-16 px-4 border-b border-slate-200 dark:border-slate-800">
+          <div className="flex items-center gap-2.5 overflow-hidden">
+            <UpaLogo size="sm" showSubtitle={false} className="shrink-0" />
+            {!collapsed && (
+              <div className="flex flex-col min-w-0">
+                <span className="font-bold text-slate-900 dark:text-white text-xs leading-tight truncate">
+                  Ouvidoria UPA
+                </span>
+                <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 truncate">
+                  {settings.unit_code || 'Unidade 24h'}
+                </span>
+              </div>
+            )}
+          </div>
+
+          {/* Collapse Button */}
+          <button
+            onClick={() => setCollapsed(!collapsed)}
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            title={collapsed ? 'Expandir menu' : 'Recolher menu'}
+          >
+            {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+          </button>
         </div>
 
-        {/* Collapse Button */}
-        <button
-          onClick={() => setCollapsed(!collapsed)}
-          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          title={collapsed ? 'Expandir menu' : 'Recolher menu'}
-        >
-          {collapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-        </button>
-      </div>
+        {/* Nav List */}
+        <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto custom-scrollbar">
+          {menuItems
+            .filter(item => item.show)
+            .map(item => {
+              const Icon = item.icon;
+              const isActive = activeTab === item.id;
 
-      {/* Nav List */}
-      <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto custom-scrollbar">
-        {menuItems
-          .filter(item => item.show)
-          .map(item => {
-            const Icon = item.icon;
-            const isActive = activeTab === item.id;
-
-            return (
-              <button
-                key={item.id}
-                onClick={() => setActiveTab(item.id as ActiveTab)}
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all group ${
-                  isActive
-                    ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20 dark:bg-sky-500 dark:text-white'
-                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-100'
-                }`}
-                title={collapsed ? item.label : undefined}
-              >
-                <Icon
+              return (
+                <button
+                  key={item.id}
+                  onClick={() => {
+                    setActiveTab(item.id as ActiveTab);
+                    if (setMobileOpen) setMobileOpen(false);
+                  }}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl font-medium text-sm transition-all group ${
+                    isActive
+                      ? 'bg-sky-600 text-white shadow-md shadow-sky-600/20 dark:bg-sky-500 dark:text-white'
+                      : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-slate-100'
+                  }`}
+                  title={collapsed ? item.label : undefined}
+                >
+                  <Icon
                   className={`w-5 h-5 shrink-0 transition-transform ${
                     isActive ? 'scale-110' : 'group-hover:scale-105'
                   }`}
@@ -293,5 +311,6 @@ export const Sidebar: React.FC<SidebarProps> = ({
         </button>
       </div>
     </aside>
+  </>
   );
 };
