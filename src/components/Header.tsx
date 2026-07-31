@@ -3,6 +3,8 @@ import {
   Bell,
   Sun,
   Moon,
+  Laptop,
+  Check,
   Search,
   CheckCircle2,
   Trash2,
@@ -25,6 +27,7 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ setActiveTab, onOpenCitizenPortal }) => {
   const {
     theme,
+    themeMode,
     setTheme,
     currentUser,
     logout,
@@ -37,6 +40,7 @@ export const Header: React.FC<HeaderProps> = ({ setActiveTab, onOpenCitizenPorta
   } = useSystem();
 
   const [showNotifications, setShowNotifications] = useState(false);
+  const [showThemeDropdown, setShowThemeDropdown] = useState(false);
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
 
   // Filtrar notificações relevantes respeitando papéis, setores e permissões granulares de módulo
@@ -195,14 +199,90 @@ export const Header: React.FC<HeaderProps> = ({ setActiveTab, onOpenCitizenPorta
           )}
         </div>
 
-        {/* Theme Toggle */}
-        <button
-          onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-          className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-          title="Alternar Tema Claro / Escuro"
-        >
-          {theme === 'light' ? <Moon className="w-5 h-5" /> : <Sun className="w-5 h-5 text-amber-400" />}
-        </button>
+        {/* Theme Selector (Seguir Sistema, Modo Claro, Modo Escuro) */}
+        <div className="relative">
+          <button
+            onClick={() => {
+              setShowThemeDropdown(!showThemeDropdown);
+              setShowNotifications(false);
+            }}
+            className="p-2 rounded-xl text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors flex items-center gap-1 cursor-pointer"
+            title={`Tema: ${themeMode === 'system' ? 'Seguir Sistema' : themeMode === 'dark' ? 'Modo Escuro' : 'Modo Claro'}`}
+          >
+            {themeMode === 'system' ? (
+              <Laptop className="w-5 h-5 text-sky-600 dark:text-sky-400" />
+            ) : theme === 'dark' ? (
+              <Moon className="w-5 h-5 text-amber-400" />
+            ) : (
+              <Sun className="w-5 h-5 text-amber-500" />
+            )}
+          </button>
+
+          {showThemeDropdown && (
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl py-1.5 z-50 animate-in fade-in zoom-in-95 duration-150">
+              <div className="px-3 py-1.5 border-b border-slate-100 dark:border-slate-700 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                Preferência de Tema
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setTheme('system');
+                  setShowThemeDropdown(false);
+                }}
+                className={`w-full px-3 py-2 text-xs font-semibold flex items-center justify-between transition-colors ${
+                  themeMode === 'system'
+                    ? 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Laptop className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+                  <span>Seguir Sistema</span>
+                </div>
+                {themeMode === 'system' && <Check className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setTheme('light');
+                  setShowThemeDropdown(false);
+                }}
+                className={`w-full px-3 py-2 text-xs font-semibold flex items-center justify-between transition-colors ${
+                  themeMode === 'light'
+                    ? 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Sun className="w-4 h-4 text-amber-500" />
+                  <span>Modo Claro</span>
+                </div>
+                {themeMode === 'light' && <Check className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setTheme('dark');
+                  setShowThemeDropdown(false);
+                }}
+                className={`w-full px-3 py-2 text-xs font-semibold flex items-center justify-between transition-colors ${
+                  themeMode === 'dark'
+                    ? 'bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300'
+                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700/50'
+                }`}
+              >
+                <div className="flex items-center gap-2">
+                  <Moon className="w-4 h-4 text-amber-400" />
+                  <span>Modo Escuro</span>
+                </div>
+                {themeMode === 'dark' && <Check className="w-3.5 h-3.5 text-sky-600 dark:text-sky-400" />}
+              </button>
+            </div>
+          )}
+        </div>
 
         {/* Logout / Sair Button */}
         <button

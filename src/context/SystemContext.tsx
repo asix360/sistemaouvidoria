@@ -27,10 +27,13 @@ import {
   INITIAL_RESPONSE_TEMPLATES
 } from '../data/initialSeed';
 
+export type ThemeMode = 'system' | 'light' | 'dark';
+
 interface SystemContextType {
   // Theme & Auth & Active User
   theme: 'light' | 'dark';
-  setTheme: (t: 'light' | 'dark') => void;
+  themeMode: ThemeMode;
+  setTheme: (t: ThemeMode) => void;
   isAuthenticated: boolean;
   login: (emailOrLogin: string, pass: string) => boolean;
   loginAsUser: (user: UserProfile) => void;
@@ -56,44 +59,45 @@ interface SystemContextType {
   auditLogs: AuditLogItem[];
   responseTemplates: ResponseTemplate[];
   
-  // Filters & Search
-  searchTerm: string;
-  setSearchTerm: (term: string) => void;
-  showDeleted: boolean;
-  setShowDeleted: (show: boolean) => void;
-  
-  // Actions
-  addManifestation: (m: Omit<Manifestation, 'id' | 'protocol' | 'created_at' | 'sla' | 'forwardings' | 'responses' | 'deleted_at'>) => Manifestation;
+  // Manifestations Actions
+  addManifestation: (m: Omit<Manifestation, 'id' | 'protocol' | 'created_at' | 'forwardings' | 'responses' | 'status'> & { created_time?: string }) => Manifestation;
   updateManifestation: (id: string, updates: Partial<Manifestation>) => void;
-  softDeleteManifestation: (id: string, reason: string) => void;
+  deleteManifestation: (id: string, reason: string) => void;
   restoreManifestation: (id: string) => void;
-  
   addForwarding: (manifestationId: string, fwd: Omit<Forwarding, 'id' | 'sent_at' | 'status'>) => void;
   respondForwarding: (manifestationId: string, forwardingId: string, responseText: string, status?: Forwarding['status']) => void;
   addResponse: (manifestationId: string, resp: Omit<ResponseItem, 'id' | 'created_at' | 'author_name' | 'author_role'>) => void;
   updateStatus: (manifestationId: string, newStatus: ManifestationStatus, reason?: string) => void;
   
-  // Sector & Professional CRUD
-  addSector: (sec: Omit<Sector, 'id'>) => void;
-  updateSector: (id: string, sec: Partial<Sector>) => void;
+  // Auxiliary Entities CRUD
+  addSector: (s: Omit<Sector, 'id'>) => void;
+  updateSector: (id: string, updates: Partial<Sector>) => void;
   toggleSectorActive: (id: string) => void;
-  
-  addProfessional: (prof: Omit<Professional, 'id'>) => void;
-  updateProfessional: (id: string, prof: Partial<Professional>) => void;
+
+  addProfessional: (p: Omit<Professional, 'id'>) => void;
+  updateProfessional: (id: string, updates: Partial<Professional>) => void;
   toggleProfessionalActive: (id: string) => void;
-  
+
   // Notifications
   markNotificationRead: (id: string) => void;
   clearNotifications: () => void;
-  
+
   // Response Templates CRUD
   addResponseTemplate: (tpl: Omit<ResponseTemplate, 'id'>) => void;
-  updateResponseTemplate: (id: string, tpl: Partial<ResponseTemplate>) => void;
+  updateResponseTemplate: (id: string, updates: Partial<ResponseTemplate>) => void;
   deleteResponseTemplate: (id: string) => void;
-  
-  // Helpers
-  calculateSLA: (createdDate: string, priority: Priority, customDays?: number) => SLAInfo;
-  generateDigitalSignature: (text: string) => string;
+
+  // Audit Logs
+  logAudit: (action: any, entityType: any, entityId: string, details: string) => void;
+
+  // Global Search & Filters
+  searchTerm: string;
+  setSearchTerm: (term: string) => void;
+  showDeleted: boolean;
+  setShowDeleted: (val: boolean) => void;
+
+  // SLA Calculation Helper
+  calculateSLA: (createdDateStr: string, priority: Priority, customDays?: number) => SLAInfo;
 }
 
 const SystemContext = createContext<SystemContextType | undefined>(undefined);
@@ -101,16 +105,38 @@ const SystemContext = createContext<SystemContextType | undefined>(undefined);
 const LOCAL_STORAGE_KEY = 'ouvidoria_upa_sus_v1';
 
 export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [theme, setThemeState] = useState<'light' | 'dark'>(() => {
+  const [themeMode, setThemeModeState] = useState<ThemeMode>(() => {
     try {
-      const saved = localStorage.getItem('ouvidoria_theme');
-      if (saved === 'dark' || saved === 'light') return saved;
-      if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
-        return 'dark';
-      }
+      const saved = localStorage.getItem('ouvidoria_theme_mode');
+      if (saved === 'system' || saved === 'light' || saved === 'dark') return saved as ThemeMode;
     } catch (e) {}
-    return 'light';
+    return 'system';
   });
+
+  const [systemPrefersDark, setSystemPrefersDark] = useState<boolean>(() => {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    if (typeof window === 'undefined' || !window.matchMedia) return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
+      setSystemPrefersDark(e.matches);
+    };
+    mediaQuery.addEventListener('change', handleSystemThemeChange);
+    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
+  }, []);
+
+  const theme = React.useMemo<'light' | 'dark'>(() => {
+    if (themeMode === 'system') {
+      return systemPrefersDark ? 'dark' : 'light';
+    }
+    return themeMode;
+  }, [themeMode, systemPrefersDark]);
+
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(() => {
     return localStorage.getItem('ouvidoria_auth_session') === 'true';
   });
@@ -122,7 +148,6 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     const cleanSearch = emailOrLogin.trim().toLowerCase();
     const cleanPass = pass.trim();
 
-    // Busca estrita pelo e-mail exato, nome exato ou CPF cadastrado (sem fallback genérico)
     let foundUser = users.find(
       u => u.email.toLowerCase() === cleanSearch || 
            u.name.toLowerCase() === cleanSearch ||
@@ -137,9 +162,9 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return false;
     }
 
-    // 2. Validação de Senha
+    // 2. Validação de Senha STRICT (Aceita APENAS a senha atual do usuário)
     const expectedPassword = foundUser.password || '12345678';
-    if (cleanPass !== expectedPassword && cleanPass !== '12345678') {
+    if (cleanPass !== expectedPassword) {
       return false;
     }
 
@@ -294,27 +319,10 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
   }, [theme]);
 
-  // Escutar alterações do modo escuro/claro nas configurações do Sistema Operacional
-  useEffect(() => {
-    if (typeof window === 'undefined' || !window.matchMedia) return;
-    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
-
-    const handleSystemThemeChange = (e: MediaQueryListEvent) => {
-      const saved = localStorage.getItem('ouvidoria_theme');
-      // Se o usuário não salvou manualmente uma preferência individual, segue o sistema operacional
-      if (!saved) {
-        setThemeState(e.matches ? 'dark' : 'light');
-      }
-    };
-
-    mediaQuery.addEventListener('change', handleSystemThemeChange);
-    return () => mediaQuery.removeEventListener('change', handleSystemThemeChange);
-  }, []);
-
-  const setTheme = (t: 'light' | 'dark') => {
-    setThemeState(t);
+  const setTheme = (mode: ThemeMode) => {
+    setThemeModeState(mode);
     try {
-      localStorage.setItem('ouvidoria_theme', t);
+      localStorage.setItem('ouvidoria_theme_mode', mode);
     } catch (e) {}
   };
 
@@ -892,6 +900,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     <SystemContext.Provider
       value={{
         theme,
+        themeMode,
         setTheme,
         isAuthenticated,
         login,
