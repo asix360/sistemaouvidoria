@@ -161,6 +161,14 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const [sectors, setSectors] = useState<Sector[]>(INITIAL_SECTORS);
   const [professionals, setProfessionals] = useState<Professional[]>(INITIAL_PROFESSIONALS);
   const [notifications, setNotifications] = useState<NotificationItem[]>(INITIAL_NOTIFICATIONS);
+  const [readNotificationIds, setReadNotificationIds] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('ouvidoria_read_notification_ids');
+      return saved ? JSON.parse(saved) : [];
+    } catch (e) {
+      return [];
+    }
+  });
   const [auditLogs, setAuditLogs] = useState<AuditLogItem[]>(INITIAL_AUDIT_LOGS);
   const [responseTemplates, setResponseTemplates] = useState<ResponseTemplate[]>(INITIAL_RESPONSE_TEMPLATES);
   
@@ -726,13 +734,31 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Notifications
   const markNotificationRead = (id: string) => {
+    setReadNotificationIds(prev => {
+      if (prev.includes(id)) return prev;
+      const next = [...prev, id];
+      try {
+        localStorage.setItem('ouvidoria_read_notification_ids', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
     setNotifications(prev =>
       prev.map(n => (n.id === id ? { ...n, read: true } : n))
     );
+    import('../services/api').then(m => m.apiService.markNotificationRead(id)).catch(() => {});
   };
 
   const clearNotifications = () => {
+    const currentIds = effectiveNotifications.map(n => n.id);
+    setReadNotificationIds(prev => {
+      const combined = Array.from(new Set([...prev, ...currentIds]));
+      try {
+        localStorage.setItem('ouvidoria_read_notification_ids', JSON.stringify(combined));
+      } catch (e) {}
+      return combined;
+    });
     setNotifications([]);
+    import('../services/api').then(m => m.apiService.clearNotifications()).catch(() => {});
   };
 
   // Response Templates CRUD
@@ -761,68 +787,73 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   // Sintetizar notificações automaticamente a partir de todas as manifestações ativas
   const effectiveNotifications = React.useMemo(() => {
-    if (notifications.length > 0) return notifications;
+    let sourceList: NotificationItem[] = [];
+    if (notifications.length > 0) {
+      sourceList = notifications;
+    } else {
+      const derived: NotificationItem[] = [];
+      manifestations.forEach(m => {
+        if (m.deleted_at) return;
 
-    const derived: NotificationItem[] = [];
-    manifestations.forEach(m => {
-      if (m.deleted_at) return;
-
-      // 1. Notificação de Novo Cadastro
-      derived.push({
-        id: `not_synth_new_${m.id}`,
-        title: `Nova Manifestação Cadastrada`,
-        message: `Protocolo ${m.protocol} (${m.type}) registrado para o setor ${m.sector_name}.`,
-        type: 'new',
-        read: false,
-        timestamp: `${m.created_at} ${m.created_time || '10:00'}`,
-        manifestation_id: m.id,
-        protocol: m.protocol
-      });
-
-      // 2. Tramitações para os Setores
-      m.forwardings.forEach((fwd, idx) => {
+        // 1. Notificação de Novo Cadastro
         derived.push({
-          id: `not_synth_fwd_${m.id}_${idx}`,
-          title: `Tramitação ao Setor: ${fwd.sector_name}`,
-          message: `O protocolo ${m.protocol} foi encaminhado para análise do setor ${fwd.sector_name}.`,
+          id: `not_synth_new_${m.id}`,
+          title: `Nova Manifestação Cadastrada`,
+          message: `Protocolo ${m.protocol} (${m.type}) registrado para o setor ${m.sector_name}.`,
           type: 'new',
-          read: fwd.status === 'Respondido',
-          timestamp: fwd.created_at || m.created_at,
+          read: false,
+          timestamp: `${m.created_at} ${m.created_time || '10:00'}`,
           manifestation_id: m.id,
           protocol: m.protocol
         });
 
-        if (fwd.status === 'Respondido' && fwd.response) {
+        // 2. Tramitações para os Setores
+        m.forwardings.forEach((fwd, idx) => {
           derived.push({
-            id: `not_synth_ans_${m.id}_${idx}`,
-            title: `Parecer Técnico Recebido: ${fwd.sector_name}`,
-            message: `O setor ${fwd.sector_name} emitiu parecer técnico no protocolo ${m.protocol}.`,
-            type: 'answered',
-            read: false,
-            timestamp: fwd.response_at || m.created_at,
+            id: `not_synth_fwd_${m.id}_${idx}`,
+            title: `Tramitação ao Setor: ${fwd.sector_name}`,
+            message: `O protocolo ${m.protocol} foi encaminhado para análise do setor ${fwd.sector_name}.`,
+            type: 'new',
+            read: fwd.status === 'Respondido',
+            timestamp: fwd.created_at || m.created_at,
+            manifestation_id: m.id,
+            protocol: m.protocol
+          });
+
+          if (fwd.status === 'Respondido' && fwd.response) {
+            derived.push({
+              id: `not_synth_ans_${m.id}_${idx}`,
+              title: `Parecer Técnico Recebido: ${fwd.sector_name}`,
+              message: `O setor ${fwd.sector_name} emitiu parecer técnico no protocolo ${m.protocol}.`,
+              type: 'answered',
+              read: false,
+              timestamp: fwd.response_at || m.created_at,
+              manifestation_id: m.id,
+              protocol: m.protocol
+            });
+          }
+        });
+
+        // 3. Status Concluída / Resposta Oficial
+        if (m.status === 'Concluída' || m.responses.some(r => r.is_final)) {
+          derived.push({
+            id: `not_synth_closed_${m.id}`,
+            title: `Ouvidoria Concluída`,
+            message: `Resposta oficial definitiva emitida para o protocolo ${m.protocol}.`,
+            type: 'closed',
+            read: true,
+            timestamp: m.created_at,
             manifestation_id: m.id,
             protocol: m.protocol
           });
         }
       });
+      sourceList = derived;
+    }
 
-      // 3. Status Concluída / Resposta Oficial
-      if (m.status === 'Concluída' || m.responses.some(r => r.is_final)) {
-        derived.push({
-          id: `not_synth_closed_${m.id}`,
-          title: `Ouvidoria Concluída`,
-          message: `Resposta oficial definitiva emitida para o protocolo ${m.protocol}.`,
-          type: 'closed',
-          read: true,
-          timestamp: m.created_at,
-          manifestation_id: m.id,
-          protocol: m.protocol
-        });
-      }
-    });
-
-    return derived;
-  }, [notifications, manifestations]);
+    // Retorna apenas notificações NÃO lidas e que não tenham sido marcadas/visualizadas
+    return sourceList.filter(n => !n.read && !readNotificationIds.includes(n.id));
+  }, [notifications, manifestations, readNotificationIds]);
 
   return (
     <SystemContext.Provider
