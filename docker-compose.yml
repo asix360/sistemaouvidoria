@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  # Database PostgreSQL 16
+  db:
+    image: postgres:16-alpine
+    container_name: ouvidoria_upa_db
+    restart: always
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ouvidoria_upa_db}
+      POSTGRES_USER: ${POSTGRES_USER:-ouvidoria_admin}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-ouvidoria_secret_pass_2026}
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-ouvidoria_admin} -d ${POSTGRES_DB:-ouvidoria_upa_db}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # Backend Express API + Prisma
+  backend:
+    build:
+      context: ./server
+      dockerfile: Dockerfile
+    container_name: ouvidoria_upa_backend
+    restart: always
+    environment:
+      PORT: 4000
+      DATABASE_URL: postgresql://${POSTGRES_USER:-ouvidoria_admin}:${POSTGRES_PASSWORD:-ouvidoria_secret_pass_2026}@db:5432/${POSTGRES_DB:-ouvidoria_upa_db}?schema=public
+    ports:
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  # Frontend Nginx React App
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ouvidoria_upa_frontend
+    restart: always
+    ports:
+      - "${FRONTEND_PORT:-3080}:80"
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+    driver: local

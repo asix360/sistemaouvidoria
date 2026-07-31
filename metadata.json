@@ -1,0 +1,6 @@
+{
+  "name": "Ouvidoria UPA - Sistema de Gestão SUS",
+  "description": "Sistema completo de gestão de ouvidoria para Unidade de Pronto Atendimento (UPA/SUS) com controle de prazos SLA, tramitação, auditoria, IA para respostas padronizadas e indicadores em tempo real.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

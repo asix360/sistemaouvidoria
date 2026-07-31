@@ -1,0 +1,145 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  name         String
+  email        String   @unique
+  cpf          String?
+  role         String
+  sector_id    String?
+  sector_name  String?
+  sector_ids   Json?    // Array of sector IDs
+  sector_names Json?    // Array of sector names
+  active       Boolean  @default(true)
+  avatar_url           String?
+  permissions          Json     // Object containing permission flags
+  password             String   @default("12345678")
+  must_change_password Boolean  @default(true)
+  createdAt            DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Sector {
+  id               String   @id @default(uuid())
+  name             String
+  code             String   @unique
+  responsible_name String
+  email            String
+  phone            String
+  sla_days_default Int      @default(5)
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+}
+
+model Professional {
+  id          String   @id @default(uuid())
+  name        String
+  role        String
+  registration String
+  sector_id   String
+  sector_name String
+  shift       String
+  team        String
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Manifestation {
+  id              String    @id @default(uuid())
+  protocol        String    @unique
+  created_at      String
+  created_time    String
+  type            String
+  priority        String
+  status          String
+  origin          String
+  category        String
+  subcategory     String
+  description     String    @db.Text
+  notes           String?   @db.Text
+  is_confidential Boolean   @default(false)
+  is_anonymous    Boolean   @default(false)
+  
+  complainant     Json      // ComplainantData object
+  occurrence      Json      // OccurrenceData object
+  
+  sector_id       String
+  sector_name     String
+  
+  professional    Json?     // ProfessionalInvolved object if any
+  attachments     Json      // Array of Attachment objects
+  forwardings     Json      // Array of Forwarding objects
+  responses       Json      // Array of ResponseItem objects
+  sla             Json      // SLAInfo object
+  
+  deleted_at      String?
+  deleted_by      String?
+  deleted_reason  String?
+  
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+}
+
+model Notification {
+  id               String   @id @default(uuid())
+  title            String
+  message          String   @db.Text
+  type             String
+  read             Boolean  @default(false)
+  timestamp        String
+  manifestation_id String?
+  protocol         String?
+  createdAt        DateTime @default(now())
+}
+
+model AuditLog {
+  id        String   @id @default(uuid())
+  user_name String
+  user_role String
+  action    String
+  entity    String
+  entity_id String
+  timestamp String
+  ip        String
+  details   String   @db.Text
+  createdAt DateTime @default(now())
+}
+
+model SystemSetting {
+  id                    String   @id @default("default")
+  upa_name              String
+  unit_code             String
+  logo_url              String?  @db.Text
+  phone                 String
+  email                 String
+  address               String
+  director_name         String
+  ombudsman_coordinator String
+  operating_hours       String?
+  welcome_message       String?  @db.Text
+  default_sla_days      Int      @default(7)
+  warning_sla_days      Int      @default(3)
+  categories            Json     // Array of category strings
+  subcategories         Json     // Map of categories to subcategories
+  auto_protocol_prefix  String   @default("OUV-2026-")
+  updatedAt             DateTime @updatedAt
+}
+
+model ResponseTemplate {
+  id        String   @id @default(uuid())
+  title     String
+  type      String
+  category  String
+  content   String   @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}

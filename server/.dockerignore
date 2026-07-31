@@ -1,0 +1,23 @@
+# Ignorar dependências locais e compilações do backend
+node_modules
+dist
+
+# Ignorar logs
+*.log
+npm-debug.log*
+
+# Ignorar arquivos do Git e IDEs
+.git
+.vscode
+.idea
+
+# Ignorar variáveis de ambiente locais
+.env
+.env.*
+
+# Ignorar arquivos do SO
+.DS_Store
+Thumbs.db
+
+# Ignorar Dockerfile no contexto
+Dockerfile
