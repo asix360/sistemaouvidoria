@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { apiService } from '../services/api';
 import {
   Manifestation,
   Sector,
@@ -223,14 +224,14 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           backendAuditLogs,
           backendTemplates
         ] = await Promise.all([
-          import('../services/api').then(m => m.apiService.getSettings()),
-          import('../services/api').then(m => m.apiService.getUsers()),
-          import('../services/api').then(m => m.apiService.getSectors()),
-          import('../services/api').then(m => m.apiService.getProfessionals()),
-          import('../services/api').then(m => m.apiService.getManifestations()),
-          import('../services/api').then(m => m.apiService.getNotifications()),
-          import('../services/api').then(m => m.apiService.getAuditLogs()),
-          import('../services/api').then(m => m.apiService.getTemplates())
+          apiService.getSettings(),
+          apiService.getUsers(),
+          apiService.getSectors(),
+          apiService.getProfessionals(),
+          apiService.getManifestations(),
+          apiService.getNotifications(),
+          apiService.getAuditLogs(),
+          apiService.getTemplates()
         ]);
 
         if (backendSettings) setSettings((prev: SystemSettings) => ({ ...prev, ...backendSettings }));
@@ -276,19 +277,8 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     }
 
     loadBackendData();
-
-    // Re-sincronizar quando a janela ganha foco ou muda de hash
-    const handleFocusOrHash = () => {
-      loadBackendData();
-    };
-    window.addEventListener('focus', handleFocusOrHash);
-    window.addEventListener('hashchange', handleFocusOrHash);
-
-    return () => {
-      window.removeEventListener('focus', handleFocusOrHash);
-      window.removeEventListener('hashchange', handleFocusOrHash);
-    };
   }, []);
+
 
   // Sync state to local storage backup
   useEffect(() => {
@@ -403,7 +393,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       details
     };
     setAuditLogs(prev => [newLog, ...prev]);
-    import('../services/api').then(m => m.apiService.createAuditLog(newLog)).catch(e => console.warn(e));
+    apiService.createAuditLog(newLog).catch(e => console.warn(e));
   };
 
   // Protocol generator
@@ -458,7 +448,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     };
 
     setManifestations(prev => [newM, ...prev]);
-    import('../services/api').then(m => m.apiService.createManifestation(newM)).catch(e => console.warn(e));
+    apiService.createManifestation(newM).catch(e => console.warn(e));
     
     // Audit Log
     logAudit('Criação', 'Manifestação', protocol, `Manifestação ${protocol} cadastrada (Tipo: ${data.type}, Setor: ${data.sector_name}).`);
@@ -488,7 +478,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (m.id !== id) return m;
         const updated = { ...m, ...updates };
         logAudit('Edição', 'Manifestação', m.protocol, `Dados da manifestação ${m.protocol} atualizados.`);
-        import('../services/api').then(api => api.apiService.updateManifestation(id, updates)).catch(e => console.warn(e));
+        apiService.updateManifestation(id, updates).catch(e => console.warn(e));
         return updated;
       })
     );
@@ -506,7 +496,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
           deleted_by: currentUser.name,
           deleted_reason: reason
         };
-        import('../services/api').then(api => api.apiService.updateManifestation(id, updates)).catch(e => console.warn(e));
+        apiService.updateManifestation(id, updates).catch(e => console.warn(e));
         return {
           ...m,
           ...updates
@@ -522,7 +512,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (m.id !== id) return m;
         logAudit('Restauração', 'Manifestação', m.protocol, `Registro ${m.protocol} restaurado da lixeira.`);
         const updates = { deleted_at: null, deleted_by: undefined, deleted_reason: undefined };
-        import('../services/api').then(api => api.apiService.updateManifestation(id, updates)).catch(e => console.warn(e));
+        apiService.updateManifestation(id, updates).catch(e => console.warn(e));
         return {
           ...m,
           ...updates
@@ -550,10 +540,10 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const updatedForwardings = [...m.forwardings, newFwd];
         logAudit('Encaminhamento', 'Manifestação', m.protocol, `Encaminhado ao setor ${fwd.sector_name} (${fwd.responsible_name}) com prazo ${fwd.deadline}.`);
         
-        import('../services/api').then(api => api.apiService.updateManifestation(manifestationId, {
+        apiService.updateManifestation(manifestationId, {
           status: 'Encaminhada',
           forwardings: updatedForwardings
-        })).catch(e => console.warn(e));
+        }).catch(e => console.warn(e));
 
         return {
           ...m,
@@ -593,10 +583,10 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
         logAudit('Encaminhamento', 'Manifestação', m.protocol, `Parecer técnico do setor ${sectorName} registrado na tramitação (${status}). Assinatura: ${signature}`);
 
-        import('../services/api').then(api => api.apiService.updateManifestation(manifestationId, {
+        apiService.updateManifestation(manifestationId, {
           status: 'Em análise',
           forwardings: updatedFwds
-        })).catch(e => console.warn(e));
+        }).catch(e => console.warn(e));
 
         return {
           ...m,
@@ -631,10 +621,10 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         const nextStatus = resp.status_after || (resp.is_final ? 'Concluída' : 'Respondida');
         logAudit('Resposta', 'Manifestação', m.protocol, `Resposta oficial ${resp.is_final ? 'final' : 'parcial'} emitida ao cidadão por ${currentUser.name}. Assinatura: ${signature}`);
         
-        import('../services/api').then(api => api.apiService.updateManifestation(manifestationId, {
+        apiService.updateManifestation(manifestationId, {
           status: nextStatus,
           responses: updatedResponses
-        })).catch(e => console.warn(e));
+        }).catch(e => console.warn(e));
 
         return {
           ...m,
@@ -652,7 +642,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
         if (m.id !== manifestationId) return m;
         const action = newStatus === 'Encerrada' ? 'Encerramento' : newStatus === 'Reaberta' ? 'Reabertura' : 'Edição';
         logAudit(action as any, 'Manifestação', m.protocol, `Status alterado de ${m.status} para ${newStatus}${reason ? '. Motivo: ' + reason : ''}`);
-        import('../services/api').then(api => api.apiService.updateManifestation(manifestationId, { status: newStatus })).catch(e => console.warn(e));
+        apiService.updateManifestation(manifestationId, { status: newStatus }).catch(e => console.warn(e));
         return {
           ...m,
           status: newStatus
@@ -665,7 +655,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const addSector = (sec: Omit<Sector, 'id'>) => {
     const newSec: Sector = { ...sec, id: `sec_${Date.now()}` };
     setSectors(prev => [...prev, newSec]);
-    import('../services/api').then(m => m.apiService.createSector(newSec)).catch(e => console.warn(e));
+    apiService.createSector(newSec).catch(e => console.warn(e));
     logAudit('Criação', 'Setor', newSec.name, `Novo setor UPA adicionado: ${newSec.name} (${newSec.code}).`);
   };
 
@@ -673,7 +663,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setSectors(prev =>
       prev.map(s => (s.id === id ? { ...s, ...updates } : s))
     );
-    import('../services/api').then(m => m.apiService.updateSector(id, updates)).catch(e => console.warn(e));
+    apiService.updateSector(id, updates).catch(e => console.warn(e));
   };
 
   const toggleSectorActive = (id: string) => {
@@ -681,7 +671,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       prev.map(s => {
         if (s.id !== id) return s;
         const updated = { ...s, active: !s.active };
-        import('../services/api').then(m => m.apiService.updateSector(id, { active: updated.active })).catch(e => console.warn(e));
+        apiService.updateSector(id, { active: updated.active }).catch(e => console.warn(e));
         return updated;
       })
     );
@@ -691,7 +681,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
   const addProfessional = (prof: Omit<Professional, 'id'>) => {
     const newProf: Professional = { ...prof, id: `prof_${Date.now()}` };
     setProfessionals(prev => [...prev, newProf]);
-    import('../services/api').then(m => m.apiService.createProfessional(newProf)).catch(e => console.warn(e));
+    apiService.createProfessional(newProf).catch(e => console.warn(e));
     logAudit('Criação', 'Profissional', newProf.name, `Profissional cadastrado: ${newProf.name} (${newProf.registration}).`);
   };
 
@@ -699,7 +689,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setProfessionals(prev =>
       prev.map(p => (p.id === id ? { ...p, ...updates } : p))
     );
-    import('../services/api').then(m => m.apiService.updateProfessional(id, updates)).catch(e => console.warn(e));
+    apiService.updateProfessional(id, updates).catch(e => console.warn(e));
   };
 
   const toggleProfessionalActive = (id: string) => {
@@ -707,7 +697,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       prev.map(p => {
         if (p.id !== id) return p;
         const updated = { ...p, active: !p.active };
-        import('../services/api').then(m => m.apiService.updateProfessional(id, { active: updated.active })).catch(e => console.warn(e));
+        apiService.updateProfessional(id, { active: updated.active }).catch(e => console.warn(e));
         return updated;
       })
     );
@@ -722,7 +712,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       id: `user_${Date.now()}`
     };
     setUsers(prev => [...prev, newUser]);
-    import('../services/api').then(m => m.apiService.createUser(newUser)).catch(e => console.warn(e));
+    apiService.createUser(newUser).catch(e => console.warn(e));
     logAudit('Criação', 'Usuário', newUser.id, `Novo usuário cadastrado no sistema: ${newUser.name} (${newUser.role}). Senha padrão '12345678' definida com troca obrigatória no 1º acesso.`);
   };
 
@@ -733,7 +723,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (currentUser.id === userId) {
       setCurrentUser(prev => ({ ...prev, ...updatedData }));
     }
-    import('../services/api').then(m => m.apiService.updateUser(userId, updatedData)).catch(e => console.warn(e));
+    apiService.updateUser(userId, updatedData).catch(e => console.warn(e));
     logAudit('Edição', 'Usuário', userId, `Dados do usuário ${userId} atualizados.`);
   };
 
@@ -745,7 +735,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     if (currentUser.id === userId) {
       setCurrentUser(prev => ({ ...prev, permissions }));
     }
-    import('../services/api').then(m => m.apiService.updateUser(userId, { permissions })).catch(e => console.warn(e));
+    apiService.updateUser(userId, { permissions }).catch(e => console.warn(e));
     logAudit('Edição', 'Usuário', userId, `Permissões de usuário atualizadas.`);
   };
 
@@ -753,7 +743,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setUsers(prev =>
       prev.map(u => (u.id === userId ? { ...u, password: '12345678', must_change_password: true } : u))
     );
-    import('../services/api').then(m => m.apiService.resetPassword(userId)).catch(e => console.warn(e));
+    apiService.resetPassword(userId).catch(e => console.warn(e));
     logAudit('Edição', 'Usuário', userId, `Senha do usuário resetada para a senha padrão '12345678'. Troca de senha exigida no próximo acesso.`);
   };
 
@@ -762,14 +752,14 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       prev.map(u => (u.id === userId || u.email.toLowerCase() === currentUser.email.toLowerCase() ? { ...u, password: newPass, must_change_password: false } : u))
     );
     setCurrentUser(prev => ({ ...prev, password: newPass, must_change_password: false }));
-    import('../services/api').then(m => m.apiService.changePassword(userId, newPass)).catch(e => console.warn(e));
+    apiService.changePassword(userId, newPass).catch(e => console.warn(e));
     logAudit('Edição', 'Usuário', userId, `Senha do usuário alterada com sucesso.`);
   };
 
   // Settings
   const updateSettings = (s: SystemSettings) => {
     setSettings(s);
-    import('../services/api').then(m => m.apiService.updateSettings(s)).catch(err => console.warn('Erro ao atualizar configurações no backend:', err));
+    apiService.updateSettings(s).catch(err => console.warn('Erro ao atualizar configurações no backend:', err));
     logAudit('Edição', 'Configurações', s.unit_code, `Parâmetros do sistema UPA atualizados.`);
   };
 
@@ -786,7 +776,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
     setNotifications(prev =>
       prev.map(n => (n.id === id ? { ...n, read: true } : n))
     );
-    import('../services/api').then(m => m.apiService.markNotificationRead(id)).catch(() => {});
+    apiService.markNotificationRead(id).catch(() => {});
   };
 
   const clearNotifications = () => {
@@ -799,7 +789,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       return combined;
     });
     setNotifications([]);
-    import('../services/api').then(m => m.apiService.clearNotifications()).catch(() => {});
+    apiService.clearNotifications().catch(() => {});
   };
 
   // Response Templates CRUD
@@ -809,7 +799,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
       id: `tpl_${Date.now()}`
     };
     setResponseTemplates(prev => [...prev, newTpl]);
-    import('../services/api').then(m => m.apiService.createTemplate(newTpl)).catch(e => console.warn(e));
+    apiService.createTemplate(newTpl).catch(e => console.warn(e));
     logAudit('Criação', 'Configurações', newTpl.id, `Novo modelo de resposta padrão cadastrado: "${newTpl.title}".`);
   };
 
@@ -822,7 +812,7 @@ export const SystemProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
   const deleteResponseTemplate = (id: string) => {
     setResponseTemplates(prev => prev.filter(t => t.id !== id));
-    import('../services/api').then(m => m.apiService.deleteTemplate(id)).catch(e => console.warn(e));
+    apiService.deleteTemplate(id).catch(e => console.warn(e));
     logAudit('Exclusão (Soft Delete)', 'Configurações', id, `Modelo de resposta padrão removido.`);
   };
 

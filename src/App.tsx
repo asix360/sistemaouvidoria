@@ -1,27 +1,39 @@
-import React, { useState } from 'react';
-import { ShieldAlert } from 'lucide-react';
+import React, { useState, lazy, Suspense } from 'react';
+import { ShieldAlert, Loader2 } from 'lucide-react';
 import { SystemProvider, useSystem } from './context/SystemContext';
 import { Sidebar, ActiveTab, isTabAllowed } from './components/Sidebar';
 import { Header } from './components/Header';
 import { LoginView } from './components/LoginView';
-import { CitizenPortalView } from './components/CitizenPortalView';
 import { DashboardView } from './components/DashboardView';
 import { ManifestationListView } from './components/ManifestationListView';
-import { OfficialResponsesView } from './components/OfficialResponsesView';
-import { SectorResponseView } from './components/SectorResponseView';
-import { NewManifestationModalView } from './components/NewManifestationModalView';
-import { SLAControlView } from './components/SLAControlView';
-import { TramitacaoView } from './components/TramitacaoView';
-import { SectorsManagementView } from './components/SectorsManagementView';
-import { ProfessionalsManagementView } from './components/ProfessionalsManagementView';
-import { ReportsView } from './components/ReportsView';
-import { UsersPermissionsView } from './components/UsersPermissionsView';
-import { AuditLogView } from './components/AuditLogView';
-import { SettingsView } from './components/SettingsView';
-import { ResponseTemplatesView } from './components/ResponseTemplatesView';
-import { ManifestationDetailModal } from './components/ManifestationDetailModal';
-import { ChangePasswordModal } from './components/ChangePasswordModal';
 import { Manifestation } from './types';
+import { ToastProvider } from './context/ToastContext';
+
+// Code-splitting de visões pesadas com React.lazy
+const CitizenPortalView = lazy(() => import('./components/CitizenPortalView').then(m => ({ default: m.CitizenPortalView })));
+const OfficialResponsesView = lazy(() => import('./components/OfficialResponsesView').then(m => ({ default: m.OfficialResponsesView })));
+const SectorResponseView = lazy(() => import('./components/SectorResponseView').then(m => ({ default: m.SectorResponseView })));
+const NewManifestationModalView = lazy(() => import('./components/NewManifestationModalView').then(m => ({ default: m.NewManifestationModalView })));
+const SLAControlView = lazy(() => import('./components/SLAControlView').then(m => ({ default: m.SLAControlView })));
+const TramitacaoView = lazy(() => import('./components/TramitacaoView').then(m => ({ default: m.TramitacaoView })));
+const SectorsManagementView = lazy(() => import('./components/SectorsManagementView').then(m => ({ default: m.SectorsManagementView })));
+const ProfessionalsManagementView = lazy(() => import('./components/ProfessionalsManagementView').then(m => ({ default: m.ProfessionalsManagementView })));
+const ReportsView = lazy(() => import('./components/ReportsView').then(m => ({ default: m.ReportsView })));
+const UsersPermissionsView = lazy(() => import('./components/UsersPermissionsView').then(m => ({ default: m.UsersPermissionsView })));
+const AuditLogView = lazy(() => import('./components/AuditLogView').then(m => ({ default: m.AuditLogView })));
+const SettingsView = lazy(() => import('./components/SettingsView').then(m => ({ default: m.SettingsView })));
+const ResponseTemplatesView = lazy(() => import('./components/ResponseTemplatesView').then(m => ({ default: m.ResponseTemplatesView })));
+const ManifestationDetailModal = lazy(() => import('./components/ManifestationDetailModal').then(m => ({ default: m.ManifestationDetailModal })));
+const ChangePasswordModal = lazy(() => import('./components/ChangePasswordModal').then(m => ({ default: m.ChangePasswordModal })));
+
+const ViewLoadingFallback = () => (
+  <div className="h-full w-full flex flex-col items-center justify-center p-12 space-y-4">
+    <div className="w-12 h-12 rounded-2xl bg-sky-50 dark:bg-sky-950/50 flex items-center justify-center text-sky-600 dark:text-sky-400 animate-pulse">
+      <Loader2 className="w-6 h-6 animate-spin" />
+    </div>
+    <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">Carregando módulo UPA...</p>
+  </div>
+);
 
 const MainAppContent: React.FC = () => {
   const { isAuthenticated, currentUser, manifestations } = useSystem();
@@ -70,9 +82,11 @@ const MainAppContent: React.FC = () => {
   // 1. Página Pública do Cidadão (/cidadao)
   if (viewMode === 'citizen') {
     return (
-      <CitizenPortalView
-        onGoToAdminLogin={() => setViewMode('admin')}
-      />
+      <Suspense fallback={<ViewLoadingFallback />}>
+        <CitizenPortalView
+          onGoToAdminLogin={() => setViewMode('admin')}
+        />
+      </Suspense>
     );
   }
 
@@ -89,7 +103,11 @@ const MainAppContent: React.FC = () => {
   return (
     <div className="flex h-screen bg-slate-100 dark:bg-slate-900 text-slate-900 dark:text-slate-100 overflow-hidden font-sans relative">
       {/* First Access / Reset Mandatory Password Change Modal */}
-      {currentUser?.must_change_password && <ChangePasswordModal />}
+      {currentUser?.must_change_password && (
+        <Suspense fallback={null}>
+          <ChangePasswordModal />
+        </Suspense>
+      )}
       {/* Sidebar Navigation */}
       <Sidebar
         activeTab={activeTab}
@@ -136,7 +154,7 @@ const MainAppContent: React.FC = () => {
               </div>
             </div>
           ) : (
-            <>
+            <Suspense fallback={<ViewLoadingFallback />}>
               {activeTab === 'dashboard' && (
                 <DashboardView
                   setActiveTab={setActiveTab}
@@ -194,25 +212,25 @@ const MainAppContent: React.FC = () => {
               {activeTab === 'modelos' && <ResponseTemplatesView />}
 
               {activeTab === 'configuracoes' && <SettingsView />}
-            </>
+            </Suspense>
           )}
         </main>
       </div>
 
       {/* Manifestation Detail & Workflow Modal */}
       {selectedManifestation && (
-        <ManifestationDetailModal
-          manifestation={
-            manifestations.find(m => m.id === selectedManifestation.id) || selectedManifestation
-          }
-          onClose={() => setSelectedManifestation(null)}
-        />
+        <Suspense fallback={null}>
+          <ManifestationDetailModal
+            manifestation={
+              manifestations.find(m => m.id === selectedManifestation.id) || selectedManifestation
+            }
+            onClose={() => setSelectedManifestation(null)}
+          />
+        </Suspense>
       )}
     </div>
   );
 };
-
-import { ToastProvider } from './context/ToastContext';
 
 export function App() {
   return (
@@ -225,3 +243,4 @@ export function App() {
 }
 
 export default App;
+
